@@ -1,0 +1,77 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Retailer {
+  id              String  @id @default(cuid())
+  name            String  @unique
+  channel         String
+  circanaCoverage Boolean @default(true)
+  priority        String  @default("Med")
+  createdAt       DateTime @default(now())
+
+  promoEvents PromoEvent[]
+  budgets     Budget[]
+}
+
+model SKU {
+  id        String   @id @default(cuid())
+  skuCode   String   @unique
+  category  String
+  brand     String
+  unitCost  Float
+  basePrice Float
+  createdAt DateTime @default(now())
+
+  promoEvents PromoEvent[]
+}
+
+model PromoEvent {
+  id            String   @id @default(cuid())
+  retailerId    String
+  skuId         String
+  periodStart   DateTime
+  periodEnd     DateTime
+  discountDepth Float    // e.g. 0.10 = 10%
+  durationWeeks Int
+  baselineUnits Int
+  promoUnits    Int
+  inventoryFlag String   // OK / LOW
+  createdAt     DateTime @default(now())
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+  sku      SKU      @relation(fields: [skuId], references: [id])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  retailerId String
+  period     String   // e.g. "2026-Q2" or "2026-03"
+  spend      Float
+  createdAt  DateTime @default(now())
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  title     String
+  summary   String   @default("") // rolling memory summary
+  createdAt DateTime @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // system | user | assistant | tool
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+}
