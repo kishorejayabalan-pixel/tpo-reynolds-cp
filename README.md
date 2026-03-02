@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TPO Simulator — Reynolds CP Agent Demo
 
-## Getting Started
+Full-stack TPO (Trade Promotion Optimization) agent demo: Next.js + LLM tool-calling + SQLite + exec dashboard.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Add your OpenAI API key to .env
+# Copy .env.example to .env and set OPENAI_API_KEY
+
+# 3. Initialize database
+npx prisma migrate dev --name init
+
+# 4. Seed sample data (10 retailers, 5 SKUs, 120 promo events, budgets)
+npm run seed
+
+# 5. Run dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Logo
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`public/rcp-logo.svg` is a placeholder. Replace it with the official Reynolds logo asset (PNG or SVG) to use the real brand. Keep the same filename if you want the app to pick it up automatically, or update the image reference in `src/app/page.tsx`.
 
-## Learn More
+## Demo Script
 
-To learn more about Next.js, take a look at the following resources:
+1. Select period **2026-Q2**, objective **Maximize Margin**
+2. Click **Run** or ask in chat: *"Should we reallocate 10% from Club to Walmart? What's the impact?"*
+3. Agent responds with recommended allocation, KPIs, confidence, and explanation bullets
+4. Confidence will show *medium/low* when Circana gaps exist (Walmart, Club, Amazon, etc.)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> *"This isn't a chatbot giving opinions. It uses tools: it queries budgets, simulates hundreds of allocations, calculates margin impact, and explains confidence limits when data is missing."*
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
+- **Visual**: Next.js 16, Tailwind, Recharts
+- **Agent**: OpenAI tool-calling (getBudgets, getRetailers, runTpoOptimization)
+- **DB**: SQLite + Prisma (Retailer, SKU, PromoEvent, Budget, Conversation, Message)
+- **TPO Tools**: metrics, scenario generator (200 scenarios), optimizer, Circana coverage checker
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server |
+| `npm run build` | Build for production |
+| `npm run seed` | Seed sample data |
+| `npm run db:migrate` | Run Prisma migrations |
+| `npm run db:generate` | Generate Prisma client |
