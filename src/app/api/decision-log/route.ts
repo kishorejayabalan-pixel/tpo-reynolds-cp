@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const searchParams = req.nextUrl?.searchParams ?? new URL(req.url || "").searchParams;
+    const searchParams = new URL(req.url).searchParams;
     const limit = Math.min(
       parseInt(searchParams.get("limit") ?? "20", 10) || 20,
       100
