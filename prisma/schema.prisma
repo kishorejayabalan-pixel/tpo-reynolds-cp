@@ -7,16 +7,103 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model Product {
+  id         String     @id @default(cuid())
+  brand      String
+  category   String
+  name       String
+  baseCost   Float
+  basePrice  Float
+  promotions Promotion[]
+  baselines  Baseline[]
+}
+
 model Retailer {
   id              String  @id @default(cuid())
   name            String  @unique
-  channel         String
+  channel         String  // mass, grocery, club, drug
   circanaCoverage Boolean @default(true)
   priority        String  @default("Med")
   createdAt       DateTime @default(now())
 
-  promoEvents PromoEvent[]
-  budgets     Budget[]
+  promoEvents  PromoEvent[]
+  budgets      Budget[]
+  promotions   Promotion[]
+  baselines    Baseline[]
+  objectives   Objective[]
+}
+
+model Baseline {
+  id         String   @id @default(cuid())
+  period     String
+  week       Int
+  retailerId String
+  productId  String
+  baseUnits  Int
+  basePrice  Float
+  baseCost   Float
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+}
+
+model Promotion {
+  id              String   @id @default(cuid())
+  period          String
+  retailerId      String
+  productId       String
+  promoType       String   // ALL_PRICE_OFF, BOGO, DISPLAY, FEATURE, etc.
+  discountPct     Float
+  displayFlag     Boolean
+  featureFlag     Boolean
+  startWeek       Int
+  durationWeeks   Int
+  status          String   // DRAFT, APPLIED
+  createdBy       String?  // HUMAN | AGENT
+  createdByRunId  String?  // nullable
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+}
+
+model Objective {
+  id               String    @id @default(cuid())
+  period           String
+  retailerId       String
+  objectiveType    String    // MAX_MARGIN, MAX_ROI, MAX_UNITS, BALANCED
+  minSpend         Float?
+  maxDiscountPct   Float
+  tradeSpendPctMin Float
+  tradeSpendPctMax Float
+  notes            String?
+  scenarios        Scenario[]
+  agentRuns        AgentRun[]
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+}
+
+model Scenario {
+  id          String   @id @default(cuid())
+  objectiveId String
+  createdAt   DateTime @default(now())
+  name        String
+  planJson    Json     // promotions array
+  kpisJson    Json     // KPIs object
+  mode        String?  // HUMAN | AGENT
+  targetJson  Json?    // target revenue, margin, etc.
+
+  objective Objective @relation(fields: [objectiveId], references: [id])
+}
+
+model AgentRun {
+  id          String    @id @default(cuid())
+  objectiveId String
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  status      String
+  traceJson   Json      // top candidates trace
+
+  objective Objective @relation(fields: [objectiveId], references: [id])
 }
 
 model SKU {
@@ -32,17 +119,20 @@ model SKU {
 }
 
 model PromoEvent {
-  id            String   @id @default(cuid())
-  retailerId    String
-  skuId         String
-  periodStart   DateTime
-  periodEnd     DateTime
-  discountDepth Float    // e.g. 0.10 = 10%
-  durationWeeks Int
-  baselineUnits Int
-  promoUnits    Int
-  inventoryFlag String   // OK / LOW
-  createdAt     DateTime @default(now())
+  id             String    @id @default(cuid())
+  retailerId     String
+  skuId          String
+  periodStart    DateTime
+  periodEnd      DateTime
+  discountDepth  Float     // e.g. 0.10 = 10%
+  durationWeeks  Int
+  baselineUnits  Int
+  promoUnits     Int
+  inventoryFlag  String    // OK / LOW
+  promoType      String?   // None | All Price Off | Display | Feature | BOGO | Seasonal
+  displaySupport Boolean?  @default(false)
+  featureAd      Boolean?  @default(false)
+  createdAt      DateTime  @default(now())
 
   retailer Retailer @relation(fields: [retailerId], references: [id])
   sku      SKU      @relation(fields: [skuId], references: [id])
@@ -61,9 +151,11 @@ model Budget {
 model Conversation {
   id        String   @id @default(cuid())
   title     String
-  summary   String   @default("") // rolling memory summary
+  summary   String   @default("") // rolling summary, max 800 chars
   createdAt DateTime @default(now())
   messages  Message[]
+  agentMemory AgentMemory?
+  optimizationRuns OptimizationRun[]
 }
 
 model Message {
@@ -74,4 +166,65 @@ model Message {
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
+}
+
+model AgentMemory {
+  id                  String   @id @default(cuid())
+  conversationId      String   @unique
+  preferredObjective  String?  @default("maximize_margin")
+  retailerPriorities  String?  // JSON array
+  riskTolerance       String?  @default("medium")
+  typicalPeriod       String?  @default("2026-Q2")
+  constraintsJson     String?  // minSpendByRetailer, excludeRetailers
+  notes               String?
+  updatedAt           DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+}
+
+model OptimizationRun {
+  id             String   @id @default(cuid())
+  conversationId String
+  payload        String   // JSON: full optimization result
+  scenarioCount  Int
+  runtimeMs      Int
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+}
+
+model SavedScenario {
+  id        String   @id @default(cuid())
+  name      String
+  payload   String   // JSON scenario
+  createdAt DateTime @default(now())
+}
+
+model SignalTick {
+  id           String   @id @default(cuid())
+  type         String   // competitor_drop | inventory_delay | demand_spike
+  retailerId   String?
+  category     String?
+  payload      String   // JSON: e.g. { competitorIndexDeltaPct, skuId, delayWeeks }
+  createdAt    DateTime @default(now())
+}
+
+model AutopilotState {
+  id                 String   @id @default(cuid())
+  retailerId         String   @unique
+  lastRoiBelowTarget Boolean  @default(false)
+  updatedAt          DateTime @updatedAt
+}
+
+model DecisionLog {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  retailerId    String?
+  agent         String
+  action        String
+  reason        String
+  beforeKpiJson String   // JSON: { revenue, margin, roi, spend, stockoutRisk, ... }
+  afterKpiJson  String?  // JSON: same shape as beforeKpiJson
+  diff          String?  // JSON: deltas between before/after
+  signalContext String?  // JSON: recent signals that triggered the change
 }

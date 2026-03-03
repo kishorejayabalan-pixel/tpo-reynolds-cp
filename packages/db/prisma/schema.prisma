@@ -1,0 +1,178 @@
+// TPO/TPM Demo - Reynolds CP
+// Blueprint: Product, Retailer, Store, Calendar, Promotion, PromoLine, signals, agent ops
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Master data ───
+model Product {
+  id         String   @id @default(cuid())
+  sku        String   @unique
+  brand      String
+  category   String
+  basePrice  Float
+  baseCost   Float
+  createdAt  DateTime @default(now())
+
+  promoLines    PromoLine[]
+  posWeekly     POS_Weekly[]
+  inventory     Inventory_Weekly[]
+}
+
+model Retailer {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  region  String  @default("US")
+  channel String  @default("Mass") // Mass, Grocery, Club, Drug
+  createdAt DateTime @default(now())
+
+  stores         Store[]
+  promotions     Promotion[]
+  posWeekly      POS_Weekly[]
+  inventory      Inventory_Weekly[]
+  competitorSignals CompetitorSignal[]
+}
+
+model Store {
+  id         String   @id @default(cuid())
+  retailerId String
+  storeType  String   @default("Standard") // Standard, Club, Ecom
+  createdAt  DateTime @default(now())
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+}
+
+model Calendar {
+  id        String   @id @default(cuid())
+  weekId    Int      @unique
+  startDate DateTime
+  endDate   DateTime
+}
+
+// ─── Trade planning (TPM) ───
+model Promotion {
+  id             String   @id @default(cuid())
+  retailerId     String
+  startWeek      Int
+  endWeek        Int
+  mechanicType   String   // TPR, BOGO, Display, Feature
+  discount       Float
+  expectedFunding Float
+  period         String?
+  status         String   @default("DRAFT") // DRAFT, APPLIED
+  createdAt      DateTime @default(now())
+
+  retailer  Retailer   @relation(fields: [retailerId], references: [id])
+  promoLines PromoLine[]
+}
+
+model PromoLine {
+  id             String   @id @default(cuid())
+  promotionId    String
+  productId      String
+  forecastUnits  Int
+  expectedLift   Float
+  expectedRoi    Float
+  createdAt      DateTime @default(now())
+
+  promotion Promotion @relation(fields: [promotionId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+}
+
+// ─── Signals (live inputs) ───
+model POS_Weekly {
+  id         String   @id @default(cuid())
+  week       Int
+  retailerId String
+  productId  String
+  units      Int
+  revenue    Float
+  createdAt  DateTime @default(now())
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+}
+
+model Inventory_Weekly {
+  id         String   @id @default(cuid())
+  week       Int
+  retailerId String
+  productId  String
+  onHand     Int
+  inbound    Int
+  createdAt  DateTime @default(now())
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+}
+
+model CompetitorSignal {
+  id                    String   @id @default(cuid())
+  week                  Int
+  retailerId            String
+  category              String
+  competitorIndexPrice  Float
+  promoIntensity        Float    @default(0)
+  createdAt             DateTime @default(now())
+
+  retailer Retailer @relation(fields: [retailerId], references: [id])
+}
+
+// ─── Agent ops ───
+model Objective {
+  id               String   @id @default(cuid())
+  textObjective    String
+  parsedConstraints String  // JSON
+  horizonStart     Int?
+  horizonEnd       Int?
+  createdAt        DateTime @default(now())
+}
+
+model DecisionLog {
+  id            String   @id @default(cuid())
+  timestamp     DateTime @default(now())
+  agent         String
+  action        String
+  reason        String
+  impactSummary String?
+  diff          String?  // JSON before/after
+  signalContext String?
+  createdAt     DateTime @default(now())
+}
+
+// ─── Legacy / compatibility (existing app) ───
+model Conversation {
+  id               String   @id @default(cuid())
+  title            String
+  summary          String   @default("")
+  createdAt        DateTime @default(now())
+  messages         Message[]
+  optimizationRuns OptimizationRun[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+}
+
+model OptimizationRun {
+  id             String   @id @default(cuid())
+  conversationId String?
+  payload        String
+  scenarioCount  Int
+  runtimeMs      Int
+  createdAt      DateTime @default(now())
+
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+}
