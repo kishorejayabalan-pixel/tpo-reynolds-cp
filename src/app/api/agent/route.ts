@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import {
   getRetailers,
   getBudgets,
@@ -238,6 +238,30 @@ async function executeTool(
         confidenceScore: result.topScenario.confidenceScore,
       },
     };
+
+    if (prisma.decisionLog) {
+      try {
+        await prisma.decisionLog.create({
+          data: {
+            retailerId: null,
+            agent: "chat_agent",
+            action: "runAgenticOptimization",
+            reason: (result.explanationBullets ?? []).join("; ") || "Budget optimization run",
+            beforeKpiJson: JSON.stringify({ baseAllocation: baseByName }),
+            afterKpiJson: JSON.stringify(result.topScenario),
+            diff: JSON.stringify(deltasVsBase),
+            signalContext: JSON.stringify({ period, objective }),
+            constraints: JSON.stringify(constraints),
+            kpiBefore: JSON.stringify(baseByName),
+            kpiAfter: JSON.stringify(result.topScenario),
+            top5: JSON.stringify(result.top5Scenarios.map((s) => ({ allocation: s.allocation, roi: s.roi, incMargin: s.incMargin }))),
+            explanation: result.explanationBullets?.join("; ") ?? null,
+          },
+        });
+      } catch (err) {
+        console.warn("DecisionLog create failed:", err);
+      }
+    }
 
     try {
       await prisma.optimizationRun.create({

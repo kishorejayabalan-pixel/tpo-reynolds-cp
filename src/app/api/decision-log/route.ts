@@ -47,6 +47,12 @@ export async function GET(req: NextRequest) {
         signalContext: e.signalContext
           ? (JSON.parse(e.signalContext) as Record<string, unknown>)
           : null,
+        signals: e.signals ? (JSON.parse(e.signals) as unknown) : null,
+        constraints: e.constraints ? (JSON.parse(e.constraints) as unknown) : null,
+        kpiBefore: e.kpiBefore ? (JSON.parse(e.kpiBefore) as Record<string, unknown>) : null,
+        kpiAfter: e.kpiAfter ? (JSON.parse(e.kpiAfter) as Record<string, unknown>) : null,
+        top5: e.top5 ? (JSON.parse(e.top5) as unknown) : null,
+        explanation: e.explanation ?? null,
       })),
     });
   } catch (e) {

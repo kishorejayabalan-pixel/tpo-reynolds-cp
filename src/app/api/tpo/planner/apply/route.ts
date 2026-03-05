@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const scenario = await prisma.scenario.findUnique({
+    const scenario = await prisma.objectiveScenario.findUnique({
       where: { id: scenarioId },
       include: { objective: true },
     });

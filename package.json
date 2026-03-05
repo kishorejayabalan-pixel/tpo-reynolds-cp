@@ -25,6 +25,7 @@
     "openai": "^4",
     "react": "^19",
     "react-dom": "^19",
+    "recharts": "^3.7.0",
     "zod": "^3"
   },
   "devDependencies": {

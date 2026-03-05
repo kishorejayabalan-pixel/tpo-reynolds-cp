@@ -61,9 +61,11 @@ model Promotion {
   status          String   // DRAFT, APPLIED
   createdBy       String?  // HUMAN | AGENT
   createdByRunId  String?  // nullable
+  scenarioId      String?
 
   retailer Retailer @relation(fields: [retailerId], references: [id])
   product  Product  @relation(fields: [productId], references: [id])
+  scenario Scenario? @relation(fields: [scenarioId], references: [id])
 }
 
 model Objective {
@@ -76,13 +78,13 @@ model Objective {
   tradeSpendPctMin Float
   tradeSpendPctMax Float
   notes            String?
-  scenarios        Scenario[]
+  objectiveScenarios ObjectiveScenario[]
   agentRuns        AgentRun[]
 
   retailer Retailer @relation(fields: [retailerId], references: [id])
 }
 
-model Scenario {
+model ObjectiveScenario {
   id          String   @id @default(cuid())
   objectiveId String
   createdAt   DateTime @default(now())
@@ -93,6 +95,20 @@ model Scenario {
   targetJson  Json?    // target revenue, margin, etc.
 
   objective Objective @relation(fields: [objectiveId], references: [id])
+}
+
+// Scenario Workspace (tabs: Baseline, Agent Plan, Risk Mitigation, etc.)
+model Scenario {
+  id             String   @id @default(cuid())
+  name           String
+  objectiveJson  Json?    // { objectiveType, period, constraints, ... }
+  status         String   // DRAFT | COMMITTED | AGENT_GENERATED
+  kpiSummary     Json?    // { revenue, volume, spend, margin, roi, risk, ... }
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  promoEvents PromoEvent[]
+  promotions  Promotion[]
 }
 
 model AgentRun {
@@ -109,6 +125,8 @@ model AgentRun {
 model SKU {
   id        String   @id @default(cuid())
   skuCode   String   @unique
+  segment   String   @default("COOKING_BAKING") // COOKING_BAKING | WASTE_STORAGE | TABLEWARE | PRESTO_VALUE
+  name      String   @default("") // human friendly name for UI
   category  String
   brand     String
   unitCost  Float
@@ -122,6 +140,7 @@ model PromoEvent {
   id             String    @id @default(cuid())
   retailerId     String
   skuId          String
+  scenarioId     String?
   periodStart    DateTime
   periodEnd      DateTime
   discountDepth  Float     // e.g. 0.10 = 10%
@@ -136,6 +155,7 @@ model PromoEvent {
 
   retailer Retailer @relation(fields: [retailerId], references: [id])
   sku      SKU      @relation(fields: [skuId], references: [id])
+  scenario Scenario? @relation(fields: [scenarioId], references: [id])
 }
 
 model Budget {
@@ -213,7 +233,9 @@ model AutopilotState {
   id                 String   @id @default(cuid())
   retailerId         String   @unique
   lastRoiBelowTarget Boolean  @default(false)
-  updatedAt          DateTime @updatedAt
+  approvalMode       String?  @default("SuggestOnly") // SuggestOnly | AutoApplyUnderGuardrails | RequireApproval
+  runbookJson        String?  // JSON: guardrails, triggers, frequency
+  updatedAt         DateTime @updatedAt
 }
 
 model DecisionLog {
@@ -227,4 +249,10 @@ model DecisionLog {
   afterKpiJson  String?  // JSON: same shape as beforeKpiJson
   diff          String?  // JSON: deltas between before/after
   signalContext String?  // JSON: recent signals that triggered the change
+  signals       String?  // JSON: array of signal payloads
+  constraints   String?  // JSON: guardrails / constraints applied
+  kpiBefore     String?  // JSON: KPIs before (alias for beforeKpiJson)
+  kpiAfter      String?  // JSON: KPIs after (alias for afterKpiJson)
+  top5          String?  // JSON: top 5 candidates
+  explanation   String?  // human-readable explanation
 }

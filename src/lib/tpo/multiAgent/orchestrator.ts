@@ -320,7 +320,7 @@ async function runOptimization(
 
   const narrator = runNarratorAgent(baseMetrics, bestMetrics, basePlan, bestPlan);
 
-  const scenario = await prisma.scenario.create({
+  const scenario = await prisma.objectiveScenario.create({
     data: {
       objectiveId,
       name: mode === "HUMAN" ? "Multi-Agent Recommended" : "Autopilot Recommended",

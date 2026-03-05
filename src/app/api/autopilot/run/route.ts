@@ -243,22 +243,30 @@ export async function POST() {
           }
         : null;
 
+      const explanation = triggerReasons[retailerId]?.join("; ") ?? "autopilot_trigger";
+      const top5Summary = result.top5.slice(0, 5).map((p) => ({ kpi: p.kpi }));
+
       await prisma.decisionLog.create({
         data: {
           retailerId,
           agent: "autopilot",
           action: "apply_optimized_plan",
-          reason:
-            triggerReasons[retailerId]?.join("; ") ?? "autopilot_trigger",
+          reason: explanation,
           beforeKpiJson: beforeKpi
             ? JSON.stringify(beforeKpi)
             : JSON.stringify({}),
           afterKpiJson: JSON.stringify(afterKpi),
           diff: diff ? JSON.stringify(diff) : null,
           signalContext: JSON.stringify({
-            signals,
+            signals: signals.length,
             period: PERIOD,
           }),
+          signals: JSON.stringify(signals.slice(0, SIGNALS_LOOKBACK).map((s) => ({ type: s.type, retailerId: s.retailerId, payload: s.payload }))),
+          constraints: JSON.stringify({ roiTarget: ROI_TARGET, stockoutRiskThreshold: STOCKOUT_RISK_THRESHOLD }),
+          kpiBefore: beforeKpi ? JSON.stringify(beforeKpi) : null,
+          kpiAfter: JSON.stringify(afterKpi),
+          top5: JSON.stringify(top5Summary),
+          explanation,
         },
       });
 

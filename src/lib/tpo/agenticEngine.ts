@@ -147,7 +147,7 @@ export async function runAgent(objectiveId: string): Promise<string> {
 
   const scenarioData = bestScenario ?? { plan, metrics: calculateMetrics(simulate({ promotions: plan, baselines, weeksInPeriod })) };
 
-  const scenario = await prisma.scenario.create({
+  const scenario = await prisma.objectiveScenario.create({
     data: {
       objectiveId,
       name: "Agent Recommended",
@@ -200,6 +200,8 @@ export interface AgenticInput {
   inventoryFlags: Record<string, "OK" | "LOW">;
   nSims?: number;
   seed?: number;
+  /** Called every 25–50 iterations with current progress */
+  onProgress?: (data: { i: number; best: ScenarioResult | null; top5Preview: ScenarioResult[] }) => void;
 }
 
 export interface ScenarioResult {
@@ -341,6 +343,15 @@ export function runAgenticOptimization(input: AgenticInput): AgenticOutput {
       retailerIdByName
     );
     scenarios.push({ ...metrics, allocation });
+    const PROGRESS_INTERVAL = 50;
+    if (input.onProgress && (i + 1) % PROGRESS_INTERVAL === 0) {
+      const rankedSoFar = rankBudgetScenarios([...scenarios], input.objective);
+      input.onProgress({
+        i: i + 1,
+        best: rankedSoFar[0] ?? null,
+        top5Preview: rankedSoFar.slice(0, 5),
+      });
+    }
   }
 
   const ranked = rankBudgetScenarios(scenarios, input.objective);

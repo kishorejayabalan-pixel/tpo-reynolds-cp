@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
-  const scenario = await prisma.scenario.findFirst({
+  const scenario = await prisma.objectiveScenario.findFirst({
     where: { objectiveId },
     orderBy: { createdAt: "desc" },
   });
