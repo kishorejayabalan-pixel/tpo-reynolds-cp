@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPromoEventsInRange, periodToDateRange } from "@/lib/repo/tpoRepo";
+import { buildTPOObjectiveJson } from "@/lib/tpo/objectiveFramework";
 
 const DEFAULT_PERIOD = "2026-Q2";
 
+function agentReasonForEvent(mechanic: string | null, category: string, objective: string): string {
+  const mech = mechanic ?? "TPR";
+  if (objective.includes("Margin")) return `${mech} to maximize margin in ${category}.`;
+  if (objective.includes("Share")) return `${mech} to defend share in ${category} this week.`;
+  if (objective.includes("Inventory")) return `${mech} at reduced depth to limit stockout risk in ${category}.`;
+  if (objective.includes("Cost")) return `${mech} reallocated for cost efficiency in ${category}.`;
+  return `${mech} to balance volume and ROI in ${category}.`;
+}
+
 const OBJECTIVE_PRESETS: Record<string, { explanation: string; marginMult: number; roiMult: number; riskDelta: number }> = {
+  "Increase volumes and minimize TP spend": { explanation: "Price and promotion levers applied; prioritized by elasticities and volume contribution; VOD and optimal depth for volume impact.", marginMult: 1.05, roiMult: 1.04, riskDelta: 0.0 },
   "Max Margin": { explanation: "Maximized margin; deeper discounts on high-margin SKUs.", marginMult: 1.12, roiMult: 1.02, riskDelta: 0.02 },
   "Share Defense": { explanation: "Defended share at key retailers; shifted spend to W6–W7.", marginMult: 1.05, roiMult: 1.0, riskDelta: 0.01 },
   "Inventory Safe": { explanation: "Reduced stockout risk; smoothed promotions across weeks.", marginMult: 1.0, roiMult: 1.05, riskDelta: -0.03 },
@@ -20,7 +31,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as { sourceScenarioId?: string; objective?: string; count?: number };
     const sourceScenarioId = body.sourceScenarioId;
-    const objective = (body.objective ?? "Max Margin").trim();
+    const objective = (body.objective ?? "Increase volumes and minimize TP spend").trim();
     const count = Math.min(5, Math.max(1, body.count ?? 5));
 
     if (!sourceScenarioId) {
@@ -53,6 +64,9 @@ export async function POST(req: NextRequest) {
     const baseRoi = (baseKpi?.roi as number) ?? 1.33;
     const baseRisk = (baseKpi?.risk as number) ?? 0.12;
 
+    const sourceEventsCount = source.promoEvents.length;
+    const usedSyntheticData = sourceEventsCount === 0;
+
     const created: Array<{ id: string; name: string }> = [];
 
     for (let i = 0; i < count; i++) {
@@ -62,23 +76,39 @@ export async function POST(req: NextRequest) {
       const roiMult = preset.roiMult + (i * 0.005);
       const riskDelta = preset.riskDelta + (i * 0.005);
 
+      const objectiveJson = buildTPOObjectiveJson({
+        objectiveType: objective.replace(/\s+/g, "_").toLowerCase(),
+        period: ((source.objectiveJson as Record<string, unknown>)?.period as string) ?? DEFAULT_PERIOD,
+        constraints: {},
+        dataSource: usedSyntheticData ? "synthetic" : "real",
+      });
+
+      const discountMultiplier = 1.05 + (i * 0.02);
+      const volume = eventsToClone.reduce((s, e) => s + Math.round(e.promoUnits * (1.02 + i * 0.01)), 0);
+      const spend = eventsToClone.reduce((s, e) => s + e.baselineUnits * 0.5 * (1 + Math.min(0.35, e.discountDepth * discountMultiplier)), 0);
+
       const newScenario = await prisma.scenario.create({
         data: {
           name,
           status: "AGENT_GENERATED",
-          objectiveJson: { objective, objectiveType: objective.replace(/\s+/g, "_").toLowerCase() },
+          objectiveJson: objectiveJson as unknown as Record<string, unknown>,
           kpiSummary: {
             revenue: baseRevenue * (0.98 + (i * 0.01)),
+            volume,
+            spend: Math.round(spend),
             margin: baseMargin * marginMult,
             roi: baseRoi * roiMult,
             risk: Math.max(0.05, Math.min(0.25, baseRisk + riskDelta)),
-            explanation: preset.explanation,
+            explanation: usedSyntheticData
+              ? `Synthetic data used for elasticity and post-promo lift. ${preset.explanation}`
+              : preset.explanation,
+            syntheticDataUsed: usedSyntheticData,
           },
         },
       });
 
-      const discountMultiplier = 1.05 + (i * 0.02);
       for (const e of eventsToClone) {
+        const reason = agentReasonForEvent(e.promoType, e.sku.category, objective);
         await prisma.promoEvent.create({
           data: {
             retailerId: e.retailerId,
@@ -94,6 +124,7 @@ export async function POST(req: NextRequest) {
             promoType: e.promoType,
             displaySupport: e.displaySupport ?? false,
             featureAd: e.featureAd ?? false,
+            agentReason: reason,
           },
         });
       }

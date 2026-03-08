@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sparkles, Loader2, MessageSquare, Send } from "lucide-react";
 
 const OBJECTIVES = [
+  "Increase volumes and minimize TP spend",
   "Max Margin",
   "Share Defense",
   "Inventory Safe",
@@ -35,7 +36,7 @@ export default function GenerateAgentPlanModal({
       text: "What objective do you want for your agent-generated scenarios? You can pick one or describe your own (e.g. maximize margin, defend share, reduce stockout risk). I'll generate 5 scenarios based on your choice.",
     },
   ]);
-  const [selectedObjective, setSelectedObjective] = useState<string>("Max Margin");
+  const [selectedObjective, setSelectedObjective] = useState<string>("Increase volumes and minimize TP spend");
   const [customObjective, setCustomObjective] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);

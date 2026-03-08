@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPromoEventsInRange, periodToDateRange } from "@/lib/repo/tpoRepo";
+import { buildTPOObjectiveJson } from "@/lib/tpo/objectiveFramework";
 
 const DEFAULT_PERIOD = "2026-Q2";
+
+/** Short "why" for the agent-generated promotion (for calendar "Why?" UX). */
+function agentReasonForEvent(
+  mechanic: string | null,
+  category: string,
+  objectiveType?: string
+): string {
+  const obj = objectiveType ?? "maximize_margin";
+  const mech = mechanic ?? "TPR";
+  if (obj.includes("margin")) return `${mech} to maximize margin in ${category}.`;
+  if (obj.includes("share") || obj.includes("defense")) return `${mech} to defend share in ${category} this week.`;
+  if (obj.includes("inventory")) return `${mech} at reduced depth to limit stockout risk in ${category}.`;
+  return `${mech} to balance volume and ROI in ${category}.`;
+}
 
 /**
  * POST: Clone a scenario, apply optimization, save as new Scenario with status AGENT_GENERATED.
@@ -31,6 +46,7 @@ export async function POST(req: NextRequest) {
     const name = body.name ?? `Agent Plan – ${new Date().toLocaleDateString()}`;
 
     let eventsToClone = source.promoEvents;
+    const usedSyntheticData = eventsToClone.length === 0;
     if (eventsToClone.length === 0) {
       const period = ((source.objectiveJson as Record<string, unknown>)?.period as string) ?? DEFAULT_PERIOD;
       const { start, end } = periodToDateRange(period);
@@ -38,22 +54,42 @@ export async function POST(req: NextRequest) {
       eventsToClone = baselineEvents as typeof source.promoEvents;
     }
 
+    const sourceObj = source.objectiveJson as Record<string, unknown> | null;
+    const period = (sourceObj?.period as string) ?? DEFAULT_PERIOD;
+    const objectiveJson = buildTPOObjectiveJson({
+      objectiveType: (sourceObj?.objectiveType as string) ?? "increase_volume_minimize_tp_spend",
+      period,
+      constraints: (sourceObj?.constraints as Record<string, unknown>) ?? {},
+      dataSource: usedSyntheticData ? "synthetic" : "real",
+    });
+
+    const objectiveType = (source.objectiveJson as Record<string, unknown>)?.objectiveType as string | undefined;
+    const volume = eventsToClone.reduce((s, e) => s + Math.round(e.promoUnits * 1.05), 0);
+    const spend = eventsToClone.reduce((s, e) => s + e.baselineUnits * 0.5 * (1 + Math.min(0.35, e.discountDepth * 1.1)), 0);
+
     const newScenario = await prisma.scenario.create({
       data: {
         name,
         status: "AGENT_GENERATED",
-        objectiveJson: source.objectiveJson ?? { objectiveType: "maximize_margin" },
+        objectiveJson: objectiveJson as unknown as Record<string, unknown>,
         kpiSummary: {
           revenue: (source.kpiSummary as Record<string, unknown>)?.revenue ?? 0,
+          volume,
+          spend: Math.round(spend),
           margin: ((source.kpiSummary as Record<string, unknown>)?.margin as number ?? 0) * 1.08,
           roi: ((source.kpiSummary as Record<string, unknown>)?.roi as number ?? 1.2) * 1.02,
           risk: (source.kpiSummary as Record<string, unknown>)?.risk ?? 0.12,
-          explanation: "Cloned baseline; increased discount depth on top SKUs; shifted W6–W7 for share defense.",
+          explanation: usedSyntheticData
+            ? "Used synthetic data (elasticity and post-promo lift by category/mechanic) where real data was unavailable. Applied price and promotion levers; prioritized by volume contribution and optimal depth to increase volume and minimize TP spend."
+            : "Cloned baseline; applied price and promotion levers; increased discount depth on top SKUs; shifted W6–W7 for share defense.",
+          syntheticDataUsed: usedSyntheticData,
         },
       },
     });
 
+    const objectiveType = (source.objectiveJson as Record<string, unknown>)?.objectiveType as string | undefined;
     for (const e of eventsToClone) {
+      const reason = agentReasonForEvent(e.promoType, e.sku.category, objectiveType);
       await prisma.promoEvent.create({
         data: {
           retailerId: e.retailerId,
@@ -69,6 +105,7 @@ export async function POST(req: NextRequest) {
           promoType: e.promoType,
           displaySupport: e.displaySupport ?? false,
           featureAd: e.featureAd ?? false,
+          agentReason: reason,
         },
       });
     }

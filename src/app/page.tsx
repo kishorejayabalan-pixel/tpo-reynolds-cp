@@ -199,8 +199,7 @@ export default function OverviewCommandCenter() {
           <div className="flex items-center gap-3">
             <Image src="/rcp-logo.svg" alt="Reynolds CP" width={28} height={28} className="object-contain invert" />
             <div>
-              <p className="font-semibold text-sm">Reynolds CP</p>
-              <p className="text-xs text-slate-500">TPO Suite</p>
+              <p className="font-semibold text-sm">Reynolds CP – Promo Scenario Planning Tool</p>
             </div>
           </div>
         </div>
@@ -406,7 +405,11 @@ export default function OverviewCommandCenter() {
                     <div>
                       <div className="flex justify-between text-xs text-slate-400 mb-1">
                         <span>Budget Utilization</span>
-                        <span>{((health.spendUtilization ?? 0) * 100).toFixed(0)}%</span>
+                        <span>
+                          {(health.spendUtilization ?? 0) <= 1
+                            ? `${((health.spendUtilization ?? 0) * 100).toFixed(0)}%`
+                            : `100%+ (${((health.spendUtilization ?? 0) * 100).toFixed(0)}% of cap)`}
+                        </span>
                       </div>
                       <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
                         <div
@@ -513,12 +516,12 @@ export default function OverviewCommandCenter() {
                     <div className="flex flex-wrap gap-2">
                       {latestDecision.afterKpi?.revenue != null && (
                         <span className="rounded bg-emerald-500/20 text-emerald-300 px-2 py-1 text-xs">
-                          Revenue ${(Number(latestDecision.afterKpi.revenue) / 1e6).toFixed(2)}M
+                          Revenue ${(Number(latestDecision.afterKpi.revenue) / 1e6).toFixed(2)} Million
                         </span>
                       )}
                       {latestDecision.afterKpi?.margin != null && (
                         <span className="rounded bg-emerald-500/20 text-emerald-300 px-2 py-1 text-xs">
-                          Margin ${(Number(latestDecision.afterKpi.margin) / 1e6).toFixed(2)}M
+                          Margin ${(Number(latestDecision.afterKpi.margin) / 1e6).toFixed(2)} Million
                         </span>
                       )}
                       {latestDecision.afterKpi?.roi != null && (
@@ -571,7 +574,7 @@ export default function OverviewCommandCenter() {
                 <h4 className="text-slate-400 font-medium mb-2">Guardrails</h4>
                 <ul className="text-slate-300 space-y-1 text-xs">
                   <li>ROI floor: {runbook.guardrails.roiFloor}</li>
-                  <li>Spend cap: ${(runbook.guardrails.spendCap / 1e6).toFixed(1)}M</li>
+                  <li>Spend cap: ${(runbook.guardrails.spendCap / 1e6).toFixed(2)} Million</li>
                   <li>Max change/cycle: {(runbook.guardrails.maxChangePerCycle * 100).toFixed(0)}%</li>
                   <li>Stockout max: {(runbook.guardrails.stockoutMax * 100).toFixed(0)}%</li>
                 </ul>
@@ -609,13 +612,13 @@ export default function OverviewCommandCenter() {
               </p>
               <div className="flex gap-2 mt-2 flex-wrap">
                 {scenarioKpi?.revenue != null && (
-                  <span className="text-teal-400 text-xs">${(Number(scenarioKpi.revenue) / 1e6).toFixed(2)}M</span>
+                  <span className="text-teal-400 text-xs">${(Number(scenarioKpi.revenue) / 1e6).toFixed(2)} Million</span>
                 )}
                 {scenarioKpi?.roi != null && (
                   <span className="text-violet-400 text-xs">ROI {Number(scenarioKpi.roi).toFixed(2)}</span>
                 )}
                 {scenarioKpi?.spend != null && (
-                  <span className="text-amber-400 text-xs">${(Number(scenarioKpi.spend) / 1e6).toFixed(2)}M spend</span>
+                  <span className="text-amber-400 text-xs">${(Number(scenarioKpi.spend) / 1e6).toFixed(2)} Million spend</span>
                 )}
               </div>
             </div>

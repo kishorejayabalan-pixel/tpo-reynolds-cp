@@ -11,6 +11,7 @@ export default function EditCellPopover({
   discountPct,
   eventId,
   scenarioId,
+  agentReason,
   onSaved,
   onClose,
 }: {
@@ -20,6 +21,7 @@ export default function EditCellPopover({
   discountPct: number;
   eventId: string;
   scenarioId: string;
+  agentReason?: string | null;
   onSaved: () => void;
   onClose: () => void;
 }) {
@@ -46,6 +48,12 @@ export default function EditCellPopover({
   return (
     <div className="absolute z-20 rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl min-w-[200px]">
       <p className="text-xs text-slate-400 mb-2">{skuCode} · {weekLabel}</p>
+      {agentReason?.trim() && (
+        <div className="mb-3 rounded bg-slate-900/60 border border-slate-600/50 p-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">Why the agent chose this</p>
+          <p className="text-xs text-slate-300">{agentReason}</p>
+        </div>
+      )}
       <div className="space-y-2">
         <div>
           <label className="block text-[10px] text-slate-500">Mechanic</label>

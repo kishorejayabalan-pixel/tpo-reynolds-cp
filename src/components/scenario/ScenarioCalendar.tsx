@@ -15,6 +15,7 @@ export interface PromoCell {
   margin?: number;
   stockoutRisk?: number;
   roi?: number;
+  agentReason?: string | null;
 }
 
 const MECHANIC_COLORS: Record<string, string> = {
@@ -23,6 +24,8 @@ const MECHANIC_COLORS: Record<string, string> = {
   Feature: "bg-violet-500/80 text-white",
   Display: "bg-amber-500/80 text-white",
   "All Price Off": "bg-cyan-500/80 text-white",
+  Seasonal: "bg-pink-500/80 text-white",
+  Clearance: "bg-slate-500/80 text-slate-200",
   None: "bg-slate-700/80 text-slate-400",
 };
 
@@ -32,10 +35,12 @@ export default function ScenarioCalendar({
   skus,
   cellsBySkuWeek,
   onCellClick,
+  onWhyClick,
 }: {
   skus: Array<{ id: string; skuCode: string; category: string; displayName?: string }>;
   cellsBySkuWeek: Map<string, PromoCell>;
-  onCellClick?: (cell: PromoCell | null, weekIndex: number, sku: { id: string; skuCode: string }) => void;
+  onCellClick?: (cell: PromoCell | null, weekIndex: number, sku: { id: string; skuCode: string; displayName?: string }) => void;
+  onWhyClick?: (e: React.MouseEvent, skuName: string, weekLabel: string, reason: string) => void;
 }) {
   const grid = useMemo(() => {
     return skus.slice(0, 24).map((sku) => ({
@@ -76,40 +81,51 @@ export default function ScenarioCalendar({
                   const color = MECHANIC_COLORS[mechanic] ?? MECHANIC_COLORS.None;
                   const riskHigh = (cell?.stockoutRisk ?? 0) > 0.2;
                   const roiLow = (cell?.roi ?? 1.5) < 1.25;
+                  const hasWhy = cell?.agentReason?.trim();
+                  const tooltipParts = cell
+                    ? [
+                        cell.mechanic,
+                        `${(cell.discountPct * 100).toFixed(0)}% off`,
+                        hasWhy && "Click (i) for why",
+                        cell.expectedLift != null && `Lift: ${cell.expectedLift.toFixed(2)}x`,
+                        cell.spend != null && `Spend: $${(cell.spend / 1000).toFixed(0)}K`,
+                        cell.margin != null && `Margin: $${(cell.margin / 1000).toFixed(0)}K`,
+                        cell.stockoutRisk != null && `Risk: ${(cell.stockoutRisk * 100).toFixed(0)}%`,
+                        cell.roi != null && `ROI: ${cell.roi.toFixed(2)}`,
+                      ].filter(Boolean)
+                    : [];
                   return (
                     <td key={w} className="w-14 py-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onCellClick?.(cell ?? null, w, sku)}
-                        className={`
-                          w-full min-h-[2rem] rounded border flex flex-col items-center justify-center py-0.5 px-0.5
-                          ${color}
-                          ${riskHigh ? "ring-1 ring-red-400" : ""}
-                          ${roiLow && !riskHigh ? "ring-1 ring-amber-400" : ""}
-                        `}
-                        title={
-                          cell
-                            ? [
-                                cell.mechanic,
-                                `${(cell.discountPct * 100).toFixed(0)}% off`,
-                                cell.expectedLift != null && `Lift: ${cell.expectedLift.toFixed(2)}x`,
-                                cell.spend != null && `Spend: $${(cell.spend / 1000).toFixed(0)}K`,
-                                cell.margin != null && `Margin: $${(cell.margin / 1000).toFixed(0)}K`,
-                                cell.stockoutRisk != null && `Risk: ${(cell.stockoutRisk * 100).toFixed(0)}%`,
-                                cell.roi != null && `ROI: ${cell.roi.toFixed(2)}`,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")
-                            : "Click to add promotion"
-                        }
-                      >
-                        <span className="text-[10px] truncate max-w-full">
-                          {cell ? (cell.discountPct * 100).toFixed(0) + "%" : "—"}
-                        </span>
-                        <span className="text-[9px] opacity-90 truncate max-w-full">
-                          {cell?.mechanic ?? "—"}
-                        </span>
-                      </button>
+                      <div className="relative w-full min-h-[2rem] flex">
+                        <button
+                          type="button"
+                          onClick={() => onCellClick?.(cell ?? null, w, sku)}
+                          className={`
+                            flex-1 min-h-[2rem] rounded border flex flex-col items-center justify-center py-0.5 px-0.5
+                            ${color}
+                            ${riskHigh ? "ring-1 ring-red-400" : ""}
+                            ${roiLow && !riskHigh ? "ring-1 ring-amber-400" : ""}
+                          `}
+                          title={tooltipParts.length ? tooltipParts.join(" · ") : "Click to add promotion"}
+                        >
+                          <span className="text-[10px] truncate max-w-full">
+                            {cell ? (cell.discountPct * 100).toFixed(0) + "%" : "—"}
+                          </span>
+                          <span className="text-[9px] opacity-90 truncate max-w-full">
+                            {cell?.mechanic ?? "—"}
+                          </span>
+                        </button>
+                        {hasWhy && onWhyClick && (
+                          <button
+                            type="button"
+                            onClick={(e) => onWhyClick(e, sku.displayName ?? sku.skuCode, `W${w + 1}`, cell!.agentReason!)}
+                            className="absolute right-0.5 top-0.5 w-4 h-4 rounded-full bg-slate-900/80 hover:bg-indigo-500/80 flex items-center justify-center text-[10px] text-slate-300 hover:text-white border border-slate-600/80"
+                            title="Why this promotion?"
+                          >
+                            i
+                          </button>
+                        )}
+                      </div>
                     </td>
                   );
                 })}

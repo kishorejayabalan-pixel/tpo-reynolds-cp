@@ -45,6 +45,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const scenario = await prisma.scenario.findUnique({
+      where: { id: scenarioId },
+      select: { objectiveJson: true, kpiSummary: true },
+    });
+    const constraints = (scenario?.objectiveJson as Record<string, unknown> | null)?.constraints as Record<string, unknown> | undefined;
+    const spendCap = constraints?.spendCap != null ? Number(constraints.spendCap) : spendCapDefault;
+    const scenarioSpend = scenario?.kpiSummary != null && typeof (scenario.kpiSummary as Record<string, unknown>).spend === "number"
+      ? (scenario.kpiSummary as Record<string, unknown>).spend as number
+      : null;
+
     const events = await prisma.promoEvent.findMany({
       where: { scenarioId, ...(retailerId ? { retailerId } : {}) },
       include: { sku: true, retailer: true },
@@ -86,8 +96,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const spendCap = spendCapDefault;
-    const spendUtilization = spendCap > 0 ? spendUsed / spendCap : 0;
+    const spendUsedForUtil = scenarioSpend ?? spendUsed;
+    const spendUtilization = spendCap > 0 ? spendUsedForUtil / spendCap : 0;
     const roiCurrent = spendUsed > 0 ? totalMargin / spendUsed : 0;
     const riskCurrent = eventRows.length
       ? eventRows.reduce((a, r) => a + r.riskScore, 0) / eventRows.length

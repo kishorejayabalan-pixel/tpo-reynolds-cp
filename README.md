@@ -48,7 +48,12 @@ Open [http://localhost:3000](http://localhost:3000).
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start dev server |
-| `npm run build` | Build for production |
+| `npm run build` | Build for production (runs Prisma generate + Next build) |
+| `npm run start` | Start production server |
 | `npm run seed` | Seed sample data |
 | `npm run db:migrate` | Run Prisma migrations |
 | `npm run db:generate` | Generate Prisma client |
+
+## Deploy to Azure
+
+See **[DEPLOY_AZURE.md](./DEPLOY_AZURE.md)** for step-by-step instructions (App Service and Container Apps).

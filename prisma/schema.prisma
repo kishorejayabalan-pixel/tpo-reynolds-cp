@@ -151,6 +151,7 @@ model PromoEvent {
   promoType      String?   // None | All Price Off | Display | Feature | BOGO | Seasonal
   displaySupport Boolean?  @default(false)
   featureAd      Boolean?  @default(false)
+  agentReason    String?   // why the agent chose this promotion (for "why" UX)
   createdAt      DateTime  @default(now())
 
   retailer Retailer @relation(fields: [retailerId], references: [id])

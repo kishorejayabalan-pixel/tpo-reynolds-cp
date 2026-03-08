@@ -10,12 +10,12 @@
     "dev": "next dev",
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "build:workspaces": "npm run build --workspaces --if-present",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "seed": "npm run seed --workspace=packages/db"
+    "start": "next start"
   },
   "dependencies": {
     "@prisma/client": "^6",

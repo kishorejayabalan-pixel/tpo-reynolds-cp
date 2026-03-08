@@ -87,17 +87,17 @@ export default function AgentInsightPanel({ data }: { data: AgentInsightData | n
             <div className="flex gap-4 text-sm">
               {data.confidence.p10Revenue != null && (
                 <span className="text-slate-400">
-                  P10 revenue: <span className="text-slate-200">${(data.confidence.p10Revenue / 1e6).toFixed(2)}M</span>
+                  P10 revenue: <span className="text-slate-200">${(data.confidence.p10Revenue / 1e6).toFixed(2)} Million</span>
                 </span>
               )}
               {data.confidence.p50Revenue != null && (
                 <span className="text-slate-400">
-                  P50 revenue: <span className="text-slate-200">${(data.confidence.p50Revenue / 1e6).toFixed(2)}M</span>
+                  P50 revenue: <span className="text-slate-200">${(data.confidence.p50Revenue / 1e6).toFixed(2)} Million</span>
                 </span>
               )}
               {data.confidence.p90Revenue != null && (
                 <span className="text-slate-400">
-                  P90 revenue: <span className="text-slate-200">${(data.confidence.p90Revenue / 1e6).toFixed(2)}M</span>
+                  P90 revenue: <span className="text-slate-200">${(data.confidence.p90Revenue / 1e6).toFixed(2)} Million</span>
                 </span>
               )}
             </div>
@@ -109,7 +109,7 @@ export default function AgentInsightPanel({ data }: { data: AgentInsightData | n
 }
 
 function formatNum(n: number): string {
-  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(2)} Million`;
   if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
   return n.toFixed(2);
 }

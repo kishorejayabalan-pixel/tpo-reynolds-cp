@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TPO Simulator | Reynolds CP",
+  title: "Reynolds CP - Promo Scenario Planning Tool",
   description: "Trade Promotion Optimization Agent Demo",
 };
 

@@ -24,6 +24,7 @@ export interface PromoEventRow {
   promoUnits: number;
   inventoryFlag: string;
   retailerName: string;
+  agentReason?: string | null;
 }
 
 interface ScenarioWorkspaceProps {
@@ -61,8 +62,10 @@ export default function ScenarioWorkspace({
     weekIndex: number;
     mechanic: string;
     discountPct: number;
+    agentReason?: string | null;
     anchor: { x: number; y: number };
   } | null>(null);
+  const [whyPopover, setWhyPopover] = useState<{ skuName: string; weekLabel: string; reason: string; x: number; y: number } | null>(null);
   const [addForSkuWeek, setAddForSkuWeek] = useState<{ skuId: string; skuCode: string; weekIndex: number } | null>(null);
 
   useEffect(() => {
@@ -95,7 +98,7 @@ export default function ScenarioWorkspace({
   }, [onRefresh]);
 
   const handleCellClick = useCallback(
-    (cell: { id: string; skuId: string; skuCode: string; weekIndex: number; mechanic: string; discountPct: number } | null, weekIndex: number, sku: { id: string; skuCode: string }) => {
+    (cell: { id: string; skuId: string; skuCode: string; weekIndex: number; mechanic: string; discountPct: number; agentReason?: string | null } | null, weekIndex: number, sku: { id: string; skuCode: string; displayName?: string }) => {
       if (cell) {
         const el = document.querySelector("[data-editing-cell-anchor]") as HTMLElement;
         const rect = el?.getBoundingClientRect?.();
@@ -105,6 +108,7 @@ export default function ScenarioWorkspace({
           weekIndex: cell.weekIndex,
           mechanic: cell.mechanic,
           discountPct: cell.discountPct,
+          agentReason: cell.agentReason,
           anchor: rect ? { x: rect.left, y: rect.bottom + 4 } : { x: 200, y: 200 },
         });
       } else {
@@ -114,8 +118,20 @@ export default function ScenarioWorkspace({
     []
   );
 
+  const handleWhyClick = useCallback((e: React.MouseEvent, skuName: string, weekLabel: string, reason: string) => {
+    e.stopPropagation();
+    setWhyPopover({ skuName, weekLabel, reason, x: e.clientX, y: e.clientY });
+  }, []);
+
+  useEffect(() => {
+    if (!whyPopover) return;
+    const close = () => setWhyPopover(null);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [whyPopover]);
+
   const cellsBySkuWeek = useMemo(() => {
-    const map = new Map<string, { id: string; skuId: string; skuCode: string; category: string; weekIndex: number; mechanic: string; discountPct: number; expectedLift?: number; spend?: number; margin?: number; stockoutRisk?: number; roi?: number }>();
+    const map = new Map<string, { id: string; skuId: string; skuCode: string; category: string; weekIndex: number; mechanic: string; discountPct: number; expectedLift?: number; spend?: number; margin?: number; stockoutRisk?: number; roi?: number; agentReason?: string | null }>();
     const periodStart = new Date(2026, 2, 1); // Q2 start
     for (const e of promoEvents) {
       const start = new Date(e.periodStart);
@@ -136,6 +152,7 @@ export default function ScenarioWorkspace({
         margin: e.promoUnits * 0.3,
         stockoutRisk: 0.15,
         roi: 1.3,
+        agentReason: e.agentReason ?? null,
       });
     }
     return map;
@@ -144,8 +161,9 @@ export default function ScenarioWorkspace({
   const formatKpi = (key: string, value: unknown): string => {
     if (value == null) return "—";
     if (key === "revenue" || key === "spend" || key === "margin") {
-      return `$${Number(value) / 1e6}M`;
+      return `$${(Number(value) / 1e6).toFixed(2)} Million`;
     }
+    if (key === "volume") return `${(Number(value) / 1e6).toFixed(2)} Million units`;
     if (key === "roi") return Number(value).toFixed(2);
     if (key === "risk") return `${(Number(value) * 100).toFixed(0)}%`;
     return String(value);
@@ -204,7 +222,19 @@ export default function ScenarioWorkspace({
         skus={skusForGrid}
         cellsBySkuWeek={cellsBySkuWeek}
         onCellClick={(cell, weekIndex, sku) => handleCellClick(cell, weekIndex, sku)}
+        onWhyClick={handleWhyClick}
       />
+      {whyPopover && (
+        <div
+          className="fixed z-30 rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl max-w-xs text-sm"
+          style={{ left: whyPopover.x + 8, top: whyPopover.y + 8 }}
+        >
+          <p className="font-medium text-slate-200 mb-1">Why this promotion?</p>
+          <p className="text-slate-400 text-xs mb-1">{whyPopover.skuName} · {whyPopover.weekLabel}</p>
+          <p className="text-slate-300 text-xs">{whyPopover.reason}</p>
+          <button type="button" onClick={() => setWhyPopover(null)} className="mt-2 text-xs text-indigo-400 hover:underline">Close</button>
+        </div>
+      )}
       {editingCell && (
         <div
           className="fixed z-30"
@@ -217,6 +247,7 @@ export default function ScenarioWorkspace({
             discountPct={editingCell.discountPct}
             eventId={editingCell.eventId}
             scenarioId={scenarioId}
+            agentReason={editingCell.agentReason}
             onSaved={handleRefresh}
             onClose={() => setEditingCell(null)}
           />

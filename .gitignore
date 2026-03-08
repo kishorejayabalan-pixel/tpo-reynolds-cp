@@ -20,6 +20,10 @@
 # production
 /build
 
+# sqlite / persistent data (keep folder via data/.gitkeep)
+/data/*
+!/data/.gitkeep
+
 # misc
 .DS_Store
 *.pem

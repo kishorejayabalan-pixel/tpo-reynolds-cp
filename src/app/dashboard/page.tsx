@@ -98,7 +98,7 @@ export default function DashboardChartsPage() {
   const kpi = (s: ScenarioRow, key: string): number | string => {
     const v = (s.kpiSummary as Record<string, unknown>)?.[key];
     if (v == null) return "—";
-    if (key === "revenue" || key === "spend" || key === "margin") return `$${Number(v) / 1e6}M`;
+    if (key === "revenue" || key === "spend" || key === "margin") return `$${(Number(v) / 1e6).toFixed(2)} Million`;
     if (key === "roi") return Number(v).toFixed(2);
     if (key === "risk") return `${(Number(v) * 100).toFixed(0)}%`;
     return String(v);
@@ -111,8 +111,7 @@ export default function DashboardChartsPage() {
           <div className="flex items-center gap-3">
             <Image src="/rcp-logo.svg" alt="Reynolds CP" width={28} height={28} className="object-contain invert" />
             <div>
-              <p className="font-semibold text-sm">Reynolds CP</p>
-              <p className="text-xs text-slate-500">TPO Suite</p>
+              <p className="font-semibold text-sm">Reynolds CP – Promo Scenario Planning Tool</p>
             </div>
           </div>
         </div>
@@ -223,8 +222,8 @@ export default function DashboardChartsPage() {
                   <LineChart data={chartsData.revenueTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                     <XAxis dataKey="week" stroke="#94a3b8" fontSize={11} />
-                    <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `$${(v / 1e6).toFixed(1)}M`} />
-                    <Tooltip formatter={(v: number) => [`$${(Number(v) / 1e6).toFixed(2)}M`, ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
+                    <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `$${(v / 1e6).toFixed(1)} Million`} />
+                    <Tooltip formatter={(v: number) => [`$${(Number(v) / 1e6).toFixed(2)} Million`, ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
                     <Legend />
                     <Line type="monotone" dataKey="revenue" stroke={CHART_COLORS.revenue} name="Revenue" strokeWidth={2} dot={false} />
                     <Line type="monotone" dataKey="margin" stroke={CHART_COLORS.margin} name="Margin" strokeWidth={2} dot={false} />
@@ -277,9 +276,9 @@ export default function DashboardChartsPage() {
                 <ResponsiveContainer width="100%" height="90%">
                   <ComposedChart data={chartsData.categoryMix} layout="vertical" margin={{ top: 5, right: 30, bottom: 5, left: 80 }}>
                     <CartesianGrid stroke="#334155" />
-                    <XAxis type="number" stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `$${(v / 1e6).toFixed(1)}M`} />
+                    <XAxis type="number" stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `$${(v / 1e6).toFixed(1)} Million`} />
                     <YAxis type="category" dataKey="category" stroke="#94a3b8" fontSize={11} width={70} />
-                    <Tooltip formatter={(v: number) => [`$${(Number(v) / 1e6).toFixed(2)}M`, ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
+                    <Tooltip formatter={(v: number) => [`$${(Number(v) / 1e6).toFixed(2)} Million`, ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
                     <Legend />
                     <Bar dataKey="revenue" fill={CHART_COLORS.revenue} name="Revenue" barSize={14} radius={[0, 2, 2, 0]} />
                     <Bar dataKey="spend" fill={CHART_COLORS.spend} name="Spend" barSize={14} radius={[0, 2, 2, 0]} />

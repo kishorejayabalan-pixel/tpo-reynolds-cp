@@ -71,7 +71,7 @@ export default function PlanChangesModal({ entry, onClose }: PlanChangesModalPro
                       ? k === "risk"
                         ? `${(v * 100).toFixed(0)}%`
                         : v.toFixed(2)
-                      : `$${(v / 1e6).toFixed(2)}M`;
+                      : `$${(v / 1e6).toFixed(2)} Million`;
                   return (
                     <tr key={k} className="border-b border-slate-700/50">
                       <td className="py-2 pr-4 text-slate-300 capitalize">{k}</td>
@@ -79,7 +79,7 @@ export default function PlanChangesModal({ entry, onClose }: PlanChangesModalPro
                       <td className="py-2 pr-4 text-slate-200">{format(a)}</td>
                       <td className={`py-2 ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         {delta >= 0 ? "+" : ""}
-                        {k === "roi" || k === "risk" ? (k === "risk" ? `${(delta * 100).toFixed(0)}%` : delta.toFixed(2)) : `${(delta / 1e6).toFixed(2)}M`}
+                        {k === "roi" || k === "risk" ? (k === "risk" ? `${(delta * 100).toFixed(0)}%` : delta.toFixed(2)) : `${(delta / 1e6).toFixed(2)} Million`}
                       </td>
                     </tr>
                   );

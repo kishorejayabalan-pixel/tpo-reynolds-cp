@@ -8,6 +8,8 @@ import { LayoutGrid, ArrowLeft, Sparkles, Loader2, BarChart3 } from "lucide-reac
 import ScenarioTabs from "@/components/scenario/ScenarioTabs";
 import ScenarioWorkspace from "@/components/scenario/ScenarioWorkspace";
 import GenerateAgentPlanModal from "@/components/scenario/GenerateAgentPlanModal";
+import ScenarioSummaryDropdown from "@/components/scenario/ScenarioSummaryDropdown";
+import FeatureHighlights from "@/components/scenario/FeatureHighlights";
 import type { WorkspaceScenario } from "@/components/scenario/ScenarioTabs";
 import type { PromoEventRow } from "@/components/scenario/ScenarioWorkspace";
 import type { AgentInsightData } from "@/components/scenario/AgentInsightPanel";
@@ -22,6 +24,8 @@ export default function ScenarioWorkspacePage() {
     promoEvents: PromoEventRow[];
     kpiSummary: Record<string, unknown> | null;
     name: string;
+    objectiveJson: Record<string, unknown> | null;
+    status?: string;
   } | null>(null);
   const [agentInsight, setAgentInsight] = useState<AgentInsightData | null>(null);
   const [compareMode, setCompareMode] = useState(false);
@@ -40,6 +44,8 @@ export default function ScenarioWorkspacePage() {
         name: data.scenario.name,
         kpiSummary: data.scenario.kpiSummary,
         promoEvents: data.scenario.promoEvents ?? [],
+        objectiveJson: data.scenario.objectiveJson ?? null,
+        status: data.scenario.status,
       });
       const k = data.scenario.kpiSummary;
       if (k && (k as Record<string, unknown>).explanation) {
@@ -152,8 +158,12 @@ export default function ScenarioWorkspacePage() {
           <div className="flex items-center gap-3">
             <Image src="/rcp-logo.svg" alt="Reynolds CP" width={28} height={28} className="object-contain invert" />
             <div>
-              <p className="font-semibold text-sm">Reynolds CP</p>
-              <p className="text-xs text-slate-500">TPO Suite</p>
+              <p className="font-semibold text-sm">Reynolds CP – Promo Scenario Planning Tool</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Event inputs: <span className="text-indigo-400 font-medium">Exceedra</span>
+                <span className="text-slate-500"> · </span>
+                <span className="text-amber-400/90">Synthetic</span>
+              </p>
             </div>
           </div>
         </div>
@@ -177,6 +187,9 @@ export default function ScenarioWorkspacePage() {
             Scenario Workspace
           </div>
         </nav>
+        <div className="p-3 border-t border-slate-800">
+          <FeatureHighlights />
+        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -242,7 +255,7 @@ export default function ScenarioWorkspacePage() {
                       const delta = b - a;
                       return (
                         <li key={k} className={delta >= 0 ? "text-emerald-400" : "text-red-400"}>
-                          {k}: {delta >= 0 ? "+" : ""}{delta >= 1e6 ? `$${(delta / 1e6).toFixed(2)}M` : delta.toFixed(2)}
+                          {k}: {delta >= 0 ? "+" : ""}{delta >= 1e6 ? `$${(delta / 1e6).toFixed(2)} Million` : delta.toFixed(2)}
                         </li>
                       );
                     })}
@@ -262,7 +275,7 @@ export default function ScenarioWorkspacePage() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col min-h-0">
-              <div className="flex-shrink-0 px-4 py-2 border-b border-slate-700/50 flex items-center gap-2">
+              <div className="flex-shrink-0 px-4 py-2 border-b border-slate-700/50">
                 <button
                   type="button"
                   onClick={handleOpenGenerateAgentPlan}
@@ -272,6 +285,22 @@ export default function ScenarioWorkspacePage() {
                   <Sparkles className="h-4 w-4" />
                   Generate Agent Plan
                 </button>
+                <div className="mt-3 w-full">
+                  <ScenarioSummaryDropdown
+                    scenarioName={scenarioDetail?.name ?? "—"}
+                    status={scenarioDetail?.status}
+                    objectiveJson={scenarioDetail?.objectiveJson ?? null}
+                    kpiSummary={scenarioDetail?.kpiSummary ?? null}
+                    agentExplanation={
+                      scenarioDetail?.kpiSummary != null && typeof (scenarioDetail.kpiSummary as Record<string, unknown>).explanation === "string"
+                        ? (scenarioDetail.kpiSummary as Record<string, unknown>).explanation as string
+                        : null
+                    }
+                    signalSummary={agentInsight?.signalSummary}
+                    defaultOpen={!!activeId}
+                    extended
+                  />
+                </div>
               </div>
               <GenerateAgentPlanModal
                 open={generateAgentModalOpen}
